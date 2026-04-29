@@ -101,15 +101,17 @@
     </div>
 
 <script>
+    // 1. 基本設定（重複宣言を避けるため一箇所にまとめます）
     const SUPABASE_URL = 'https://vcbhwpahrzdjbakflwvd.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjYmh3cGFocnpkamJha2Zsd3ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5NTEzMzEsImV4cCI6MjA5MjUyNzMzMX0.Uv71jxtuVhoofw7Z5daMB7JhGncUNQyRslTuGhl_KI0';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjYmh3cGFocnpjamJha2Zsd3ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5NTEzMzEsImV4cCI6MjA5MjUyNzMzMX0.Uv71jxtuVhoofw7Z5daMB7JhGncUNQyRslTuGhl_KI0';
+    
+    // ここで一回だけ宣言
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let lastData = [];
     let timerInterval;
 
-    // 1. テーブル名が取得できない問題の修正:
-    // table_passwordsテーブルをフェッチしてドロップダウンを作る
+    // テーブルリストの取得
     async function loadTableList() {
         try {
             const { data, error } = await supabase.from('table_passwords').select('table_name');
@@ -127,12 +129,11 @@
                 });
             }
         } catch (err) {
-            console.error("テーブル名の取得に失敗:", err.message);
-            alert("テーブル一覧を取得できませんでした。table_passwordsテーブルを確認してください。");
+            console.error("取得失敗:", err.message);
         }
     }
 
-    // 2. 選択時のパスワード表示
+    // パスワード表示と初期描画
     async function initDashboard() {
         const tableName = document.getElementById('tableSelector').value;
         if (!tableName) return;
@@ -147,7 +148,7 @@
         updateRanking();
     }
 
-    // 3. タイマー
+    // タイマー開始
     function startTimer() {
         clearInterval(timerInterval);
         const mins = parseInt(document.getElementById('timerInput').value) || 0;
@@ -168,7 +169,7 @@
         }, 1000);
     }
 
-    // 4. ランキング更新（変更がある時だけ光る）
+    // ランキング取得と更新
     async function updateRanking() {
         const tableName = document.getElementById('tableSelector').value;
         if (!tableName) return;
@@ -187,6 +188,7 @@
         }
     }
 
+    // ランキング描画
     function renderRanking(newData) {
         const listContainer = document.getElementById('rankingList');
         let lastScore = -1;
@@ -198,6 +200,7 @@
             lastScore = res.score_percent;
 
             const prevRes = lastData[i];
+            // 前回と違うデータがある時だけ更新アニメーション（updatedクラス）を付与
             const isChanged = !prevRes || prevRes.nickname !== res.nickname || prevRes.score_percent !== res.score_percent;
             const isTie = newData.filter(d => d.score_percent === res.score_percent).length > 1;
             const rankLabel = isTie ? `${rank}位タイ` : `${rank}位`;
@@ -217,9 +220,9 @@
         else document.exitFullscreen();
     }
 
-    // 起動
+    // 起動時の初期処理
     loadTableList();
-    setInterval(updateRanking, 5000);
+    setInterval(updateRanking, 5000); // 5秒おきにランキングチェック
 </script>
 </body>
 </html>
