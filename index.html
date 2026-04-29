@@ -20,13 +20,17 @@
         .btn-sub { background: #64748b; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; }
 
         .header { 
-            height: 40vh; display: flex; align-items: center; justify-content: center;
+            height: 45vh; display: flex; align-items: center; justify-content: center;
             background: white; margin: 20px; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         }
-        .header-section { flex: 1; text-align: center; }
+        .header-section { flex: 1; text-align: center; display: flex; flex-direction: column; justify-content: center; }
         .divider { width: 2px; background: #f1f5f9; height: 60%; }
-        .label { font-size: 1.2rem; color: #64748b; font-weight: bold; margin-bottom: 10px; }
-        .display-value { font-size: 8rem; font-weight: bold; color: var(--text); }
+        
+        /* テーブル名表示のスタイル */
+        .table-name-label { font-size: 2.5rem; color: #64748b; font-weight: bold; margin-bottom: 5px; }
+        .label { font-size: 1.2rem; color: #94a3b8; font-weight: bold; letter-spacing: 2px; }
+        
+        .display-value { font-size: 8rem; font-weight: bold; color: var(--text); margin-top: -10px; }
         #passwordDisplay { color: var(--primary); letter-spacing: 5px; }
         #timerDisplay { color: var(--accent); font-family: monospace; }
         .timer-finished { color: #ef4444 !important; animation: blink 1s infinite; }
@@ -36,8 +40,8 @@
         .ranking-list { width: 100%; max-width: 1000px; }
         .rank-item { 
             display: flex; justify-content: space-between; align-items: center;
-            background: white; margin-bottom: 10px; padding: 20px 50px;
-            border-radius: 15px; font-size: 2.5rem; font-weight: bold;
+            background: white; margin-bottom: 10px; padding: 15px 50px;
+            border-radius: 15px; font-size: 2.2rem; font-weight: bold;
             box-shadow: 0 2px 4px rgba(0,0,0,0.02);
             transition: all 0.5s ease-in-out;
         }
@@ -47,7 +51,7 @@
             100% { background: white; transform: scale(1); }
         }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-        .rank-num { width: 200px; color: #94a3b8; font-size: 1.8rem; }
+        .rank-num { width: 200px; color: #94a3b8; font-size: 1.5rem; }
         .rank-name { flex: 1; text-align: left; }
         .rank-score { color: var(--primary); width: 150px; text-align: right; }
     </style>
@@ -66,12 +70,13 @@
 
     <div class="header">
         <div class="header-section">
-            <div class="label">PASS</div>
+            <div id="currentTableName" class="table-name-label">----</div>
+            <div class="label">EXAM PASS</div>
             <div id="passwordDisplay" class="display-value">----</div>
         </div>
         <div class="divider"></div>
         <div class="header-section">
-            <div class="label">TIME</div>
+            <div class="label" style="margin-top: 40px;">TIME LEFT</div>
             <div id="timerDisplay" class="display-value">00:00</div>
         </div>
     </div>
@@ -82,7 +87,6 @@
     </div>
 
 <script>
-    // 【重要】supabaseの宣言はここ1回だけ！
     const SUPABASE_URL = 'https://vcbhwpahrzdjbakflwvd.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjYmh3cGFocnpkamJha2Zsd3ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5NTEzMzEsImV4cCI6MjA5MjUyNzMzMX0.Uv71jxtuVhoofw7Z5daMB7JhGncUNQyRslTuGhl_KI0';
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -91,7 +95,7 @@
     let timerInterval;
 
     async function loadTableList() {
-        const { data, error } = await supabaseClient.from('table_passwords').select('table_name');
+        const { data } = await supabaseClient.from('table_passwords').select('table_name');
         if (data) {
             const selector = document.getElementById('tableSelector');
             data.forEach(item => {
@@ -106,7 +110,16 @@
     async function initDashboard() {
         const tableName = document.getElementById('tableSelector').value;
         if (!tableName) return;
-        const { data } = await supabaseClient.from('table_passwords').select('password').eq('table_name', tableName).single();
+
+        // 画面上のテーブル名を更新
+        document.getElementById('currentTableName').innerText = tableName;
+
+        const { data } = await supabaseClient
+            .from('table_passwords')
+            .select('password')
+            .eq('table_name', tableName)
+            .single();
+
         document.getElementById('passwordDisplay').innerText = data ? data.password : "----";
         updateRanking();
     }
@@ -132,7 +145,13 @@
     async function updateRanking() {
         const tableName = document.getElementById('tableSelector').value;
         if (!tableName) return;
-        const { data } = await supabaseClient.from('quiz_results').select('nickname, score_percent').eq('table_name', tableName).order('score_percent', { ascending: false }).order('created_at', { ascending: true }).limit(3);
+        const { data } = await supabaseClient
+            .from('quiz_results')
+            .select('nickname, score_percent')
+            .eq('table_name', tableName)
+            .order('score_percent', { ascending: false })
+            .order('created_at', { ascending: true })
+            .limit(3);
         if (data) {
             renderRanking(data);
             lastData = JSON.parse(JSON.stringify(data));
