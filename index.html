@@ -2,180 +2,263 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>VocaClear - Live Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>歴史クイズ (ミス問保存 & 操作対応)</title>
     <style>
-        :root { --primary: #3ecf8e; --bg: #f8fafc; --text: #1e293b; --card: #ffffff; --accent: #f59e0b; }
-        body { 
-            font-family: 'Helvetica Neue', Arial, sans-serif; background-color: var(--bg); 
-            color: var(--text); margin: 0; overflow: hidden;
-            display: flex; flex-direction: column; height: 100vh;
-        }
-        .controls { 
-            background: white; padding: 10px 20px; display: flex; gap: 10px; 
-            align-items: center; border-bottom: 1px solid #e2e8f0; z-index: 100;
-        }
-        select, input { padding: 8px 10px; border: 2px solid #e2e8f0; border-radius: 8px; outline: none; font-size: 0.9rem; }
-        .btn-main { background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        .btn-sub { background: #64748b; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; }
-
-        .header { 
-            height: 50vh; display: flex; align-items: center; justify-content: center;
-            background: white; margin: 20px; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-        }
-        .header-section { flex: 1; text-align: center; display: flex; flex-direction: column; justify-content: center; padding: 0 20px; }
-        .divider { width: 2px; background: #f1f5f9; height: 70%; }
-        
-        /* テーブル名をさらに巨大化 */
-        .table-name-label { font-size: 4.5rem; color: #1e293b; font-weight: 900; margin-bottom: 10px; word-break: break-all; line-height: 1.1; }
-        .label { font-size: 1.4rem; color: #94a3b8; font-weight: bold; letter-spacing: 3px; text-transform: uppercase; }
-        
-        .display-value { font-size: 9rem; font-weight: bold; color: var(--text); margin-top: -10px; }
-        #passwordDisplay { color: var(--primary); letter-spacing: 8px; }
-        #timerDisplay { color: var(--accent); font-family: 'Courier New', monospace; }
-        .timer-finished { color: #ef4444 !important; animation: blink 1s infinite; }
-
-        .ranking-container { flex: 1; padding: 0 40px 30px; display: flex; flex-direction: column; align-items: center; }
-        .ranking-title { font-size: 2rem; margin: 15px 0; color: #334155; font-weight: bold; }
-        .ranking-list { width: 100%; max-width: 1100px; }
-        .rank-item { 
-            display: flex; justify-content: space-between; align-items: center;
-            background: white; margin-bottom: 10px; padding: 15px 60px;
-            border-radius: 15px; font-size: 2.5rem; font-weight: bold;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-            transition: all 0.5s ease-in-out;
-        }
-        .updated { animation: flash 1.5s ease-out; }
-        @keyframes flash {
-            0% { background: #dcfce7; transform: scale(1.02); }
-            100% { background: white; transform: scale(1); }
-        }
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-        .rank-num { width: 220px; color: #94a3b8; }
-        .rank-name { flex: 1; text-align: left; }
-        .rank-score { color: var(--primary); width: 180px; text-align: right; }
+        :root { --primary: #4a90e2; --secondary: #f39c12; --error: #e74c3c; --success: #2ecc71; --bg: #f4f7f6; }
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; background: var(--bg); display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .container { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 600px; text-align: center; }
+        button { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px; transition: 0.3s; }
+        button:hover { opacity: 0.8; }
+        .card { font-size: 1.5rem; padding: 40px; border: 2px solid var(--primary); border-radius: 10px; margin: 20px 0; cursor: pointer; min-height: 100px; display: flex; align-items: center; justify-content: center; background: #fff; }
+        .card.flipped { border-color: var(--secondary); background: #fffdf9; }
+        .hidden { display: none; }
+        .miss-badge { background: var(--error); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8rem; }
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 0; text-align: left; }
+        .option-item { border: 1px solid #ddd; padding: 10px; border-radius: 5px; }
+        .result { font-weight: bold; margin-top: 10px; min-height: 1.5em; }
+        kbd { border: 1px solid #aaa; border-radius: 3px; padding: 1px 4px; font-family: sans-serif; background: #eee; font-size: 0.8rem; }
     </style>
 </head>
 <body>
 
-    <div class="controls">
-        <b style="color: var(--primary)">VocaClear Live</b>
-        <select id="tableSelector" onchange="initDashboard()">
-            <option value="">-- テーブルを選択 --</option>
-        </select>
-        <input type="number" id="timerMins" placeholder="分" style="width: 50px;" value="0">
-        <span>:</span>
-        <input type="number" id="timerSecs" placeholder="秒" style="width: 50px;" value="0">
-        <button class="btn-main" onclick="startTimer()">タイマー開始</button>
-        <button class="btn-sub" onclick="toggleFullScreen()">全画面</button>
+<div class="container" id="setup-screen">
+    <h2>歴史クイズ設定</h2>
+    <div id="status-msg">CSVファイルを読み込んでいます...</div>
+    
+    <div id="menu-area" class="hidden">
+        <h3>モード選択</h3>
+        <button onclick="startApp('flash-yr')">①(1) フラッシュ(年号→事)</button>
+        <button onclick="startApp('flash-ev')">①(2) フラッシュ(事→年号)</button>
+        <button onclick="startApp('flash-miss')">①(3) ミス問フラッシュ</button><br>
+        <button onclick="startApp('quiz-input')">② 年号入力クイズ</button>
+        <button onclick="startApp('quiz-select')">③ 出来事選択クイズ</button>
+    </div>
+    <div id="stats" style="margin-top: 20px; color: #666;"></div>
+    <div style="margin-top: 10px;"><button onclick="clearProgress()" style="background:#e74c3c; font-size:0.7rem;">ミス問リストをリセット</button></div>
+</div>
+
+<div class="container hidden" id="app-screen">
+    <div id="quiz-header">
+        <span id="mode-title"></span> | 残り: <span id="remaining-count">0</span>
+    </div>
+    
+    <div id="flash-area" class="hidden">
+        <div class="card" id="flash-card" onclick="toggleFlash()">タップまたは [Space] で回答表示</div>
+        <div>
+            <button onclick="recordResult(true)">正解 [Space]</button>
+            <button onclick="recordResult(false)" style="background:var(--error)">不正解 [M]</button>
+        </div>
+        <p style="font-size: 0.8rem; color: #888; margin-top: 15px;">操作: <kbd>Space</kbd> 回答/正解 | <kbd>M</kbd> 不正解</p>
     </div>
 
-    <div class="header">
-        <div class="header-section">
-            <div id="currentTableName" class="table-name-label">----</div>
-            <div class="label">EXAM PASS</div>
-            <div id="passwordDisplay" class="display-value">----</div>
-        </div>
-        <div class="divider"></div>
-        <div class="header-section">
-            <div class="label">TIME LEFT</div>
-            <div id="timerDisplay" class="display-value">00:00</div>
-        </div>
+    <div id="input-area" class="hidden">
+        <h3 id="input-question"></h3>
+        <input type="text" id="user-answer" placeholder="年号を入力" style="font-size: 1.2rem; padding: 5px; width: 80%;">
+        <div id="input-feedback" class="result"></div>
+        <button onclick="checkInputAnswer()">回答する (Enter)</button>
     </div>
 
-    <div class="ranking-container">
-        <div class="ranking-title">🏆 TOP 3 RANKING</div>
-        <div id="rankingList" class="ranking-list"></div>
+    <div id="select-area" class="hidden">
+        <h3 id="select-question"></h3>
+        <div class="options-grid" id="options-container"></div>
+        <div id="select-feedback" class="result"></div>
+        <button onclick="checkSelectAnswer()">回答する</button>
     </div>
+
+    <hr>
+    <button onclick="exitApp()" style="background: #999;">終了して戻る</button>
+</div>
 
 <script>
-    const SUPABASE_URL = 'https://vcbhwpahrzdjbakflwvd.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjYmh3cGFocnpkamJha2Zsd3ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5NTEzMzEsImV4cCI6MjA5MjUyNzMzMX0.Uv71jxtuVhoofw7Z5daMB7JhGncUNQyRslTuGhl_KI0';
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const CSV_FILE_PATH = 'data.csv'; 
+    const STORAGE_KEY = 'history_quiz_miss_list';
 
-    let lastData = [];
-    let timerInterval;
+    let masterData = []; 
+    let currentQueue = [];
+    let currentIndex = 0;
+    let currentMode = '';
+    let isFlipped = false;
 
-    async function loadTableList() {
-        const { data } = await supabaseClient.from('table_passwords').select('table_name');
-        if (data) {
-            const selector = document.getElementById('tableSelector');
-            data.forEach(item => {
-                const opt = document.createElement('option');
-                opt.value = item.table_name;
-                opt.textContent = item.table_name;
-                selector.appendChild(opt);
-            });
+    // --- 保存・統計ロジック ---
+    function getSavedMissList() {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        return saved ? JSON.parse(saved) : [];
+    }
+
+    function saveMissList() {
+        const missList = masterData.filter(d => d.streak < 0).map(d => `${d.yr}_${d.ev}`);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(missList));
+    }
+
+    function updateStatsDisplay() {
+        const missCount = masterData.filter(d => d.streak < 0).length;
+        const statsEl = document.getElementById('stats');
+        if (statsEl) {
+            statsEl.innerHTML = `現在のミス問登録数: <span class="miss-badge">${missCount}</span>`;
         }
     }
 
-    async function initDashboard() {
-        const tableName = document.getElementById('tableSelector').value;
-        if (!tableName) return;
-        document.getElementById('currentTableName').innerText = tableName;
-        const { data } = await supabaseClient.from('table_passwords').select('password').eq('table_name', tableName).single();
-        document.getElementById('passwordDisplay').innerText = data ? data.password : "----";
-        updateRanking();
-    }
-
-    // 秒指定に対応したタイマー開始処理
-    function startTimer() {
-        clearInterval(timerInterval);
-        const mins = parseInt(document.getElementById('timerMins').value) || 0;
-        const secs = parseInt(document.getElementById('timerSecs').value) || 0;
-        let timeLeft = (mins * 60) + secs;
-
-        const display = document.getElementById('timerDisplay');
-        display.classList.remove('timer-finished');
-
-        timerInterval = setInterval(() => {
-            const m = Math.floor(timeLeft / 60);
-            const s = timeLeft % 60;
-            display.innerText = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-            if (timeLeft <= 0) {
-                clearInterval(timerInterval);
-                display.innerText = "FINISH";
-                display.classList.add('timer-finished');
-            }
-            timeLeft--;
-        }, 1000);
-    }
-
-    async function updateRanking() {
-        const tableName = document.getElementById('tableSelector').value;
-        if (!tableName) return;
-        const { data } = await supabaseClient.from('quiz_results').select('nickname, score_percent').eq('table_name', tableName).order('score_percent', { ascending: false }).order('created_at', { ascending: true }).limit(3);
-        if (data) {
-            renderRanking(data);
-            lastData = JSON.parse(JSON.stringify(data));
+    function clearProgress() {
+        if(confirm("ミス問リストをすべて削除しますか？")) {
+            localStorage.removeItem(STORAGE_KEY);
+            location.reload();
         }
     }
 
-    function renderRanking(newData) {
-        const list = document.getElementById('rankingList');
-        let lastScore = -1, rank = 0, html = "";
-        newData.forEach((res, i) => {
-            if (res.score_percent !== lastScore) rank = i + 1;
-            lastScore = res.score_percent;
-            const prev = lastData[i];
-            const isChanged = !prev || prev.nickname !== res.nickname || prev.score_percent !== res.score_percent;
-            const tie = newData.filter(d => d.score_percent === res.score_percent).length > 1;
-            html += `<div class="rank-item ${isChanged && lastData.length > 0 ? 'updated' : ''}">
-                <div class="rank-num">${tie ? rank+'位タイ' : rank+'位'}</div>
-                <div class="rank-name">${res.nickname}</div>
-                <div class="rank-score">${res.score_percent}%</div>
-            </div>`;
+    // --- 初期化 ---
+    window.addEventListener('DOMContentLoaded', async () => {
+        const statusMsg = document.getElementById('status-msg');
+        try {
+            const response = await fetch(CSV_FILE_PATH);
+            if (!response.ok) throw new Error('CSVファイルが見つかりません');
+            const text = await response.text();
+            const savedMissIdentifiers = getSavedMissList();
+
+            masterData = text.trim().split('\n').map(line => {
+                const parts = line.split(',');
+                if (parts.length < 2) return null;
+                const yr = parts[0].trim();
+                const ev = parts[1].trim();
+                const isMiss = savedMissIdentifiers.includes(`${yr}_${ev}`);
+                return { yr, ev, streak: isMiss ? -1 : 0 };
+            }).filter(d => d !== null);
+
+            statusMsg.innerText = `CSV読み込み完了: ${masterData.length} 件`;
+            document.getElementById('menu-area').classList.remove('hidden');
+            updateStatsDisplay();
+        } catch (err) {
+            statusMsg.innerText = `エラー: ${err.message}`;
+            statusMsg.style.color = 'red';
+        }
+    });
+
+    // --- アプリ制御 ---
+    function startApp(mode) {
+        currentMode = mode;
+        if (mode === 'flash-miss') {
+            currentQueue = masterData.filter(d => d.streak < 0).sort(() => Math.random() - 0.5);
+        } else {
+            currentQueue = [...masterData].sort(() => Math.random() - 0.5);
+        }
+
+        if (currentQueue.length === 0) {
+            alert("対象のデータがありません");
+            return;
+        }
+
+        currentIndex = 0;
+        document.getElementById('remaining-count').innerText = currentQueue.length;
+        document.getElementById('setup-screen').classList.add('hidden');
+        document.getElementById('app-screen').classList.remove('hidden');
+        showQuestion();
+    }
+
+    function showQuestion() {
+        const item = currentQueue[currentIndex];
+        isFlipped = false;
+        ['flash-area', 'input-area', 'select-area'].forEach(id => document.getElementById(id).classList.add('hidden'));
+        
+        if (currentMode.startsWith('flash')) {
+            document.getElementById('flash-area').classList.remove('hidden');
+            const card = document.getElementById('flash-card');
+            card.classList.remove('flipped');
+            card.innerText = (currentMode === 'flash-yr' || (currentMode === 'flash-miss' && Math.random() > 0.5)) ? item.yr : item.ev;
+        } else if (currentMode === 'quiz-input') {
+            document.getElementById('input-area').classList.remove('hidden');
+            document.getElementById('input-question').innerText = item.ev;
+            const input = document.getElementById('user-answer');
+            input.value = ''; input.focus();
+            document.getElementById('input-feedback').innerText = '';
+        } else if (currentMode === 'quiz-select') {
+            document.getElementById('select-area').classList.remove('hidden');
+            document.getElementById('select-question').innerText = item.yr + "年";
+            document.getElementById('select-feedback').innerText = '';
+            setupSelectOptions(item);
+        }
+    }
+
+    function toggleFlash() {
+        const item = currentQueue[currentIndex];
+        const card = document.getElementById('flash-card');
+        if (!isFlipped) {
+            card.innerText = (card.innerText === item.yr) ? item.ev : item.yr;
+            card.classList.add('flipped');
+            isFlipped = true;
+        }
+    }
+
+    function recordResult(isCorrect) {
+        const item = currentQueue[currentIndex];
+        const masterItem = masterData.find(d => d.yr === item.yr && d.ev === item.ev);
+        
+        if (isCorrect) {
+            if (masterItem.streak < 0) masterItem.streak = 1;
+            else if (masterItem.streak > 0) masterItem.streak++;
+            if (masterItem.streak >= 3) masterItem.streak = 0; 
+        } else {
+            masterItem.streak = -1;
+        }
+
+        saveMissList(); 
+        currentIndex++;
+        if (currentIndex < currentQueue.length) {
+            document.getElementById('remaining-count').innerText = currentQueue.length - currentIndex;
+            showQuestion();
+        } else {
+            alert("終了しました！");
+            exitApp();
+        }
+    }
+
+    // --- 入力・選択判定 ---
+    function checkInputAnswer() {
+        const item = currentQueue[currentIndex];
+        const isCorrect = (document.getElementById('user-answer').value.trim() === item.yr);
+        document.getElementById('input-feedback').innerText = isCorrect ? "正解！" : `不正解（正解: ${item.yr}）`;
+        document.getElementById('input-feedback').style.color = isCorrect ? "var(--success)" : "var(--error)";
+        setTimeout(() => recordResult(isCorrect), 800);
+    }
+
+    function setupSelectOptions(correctItem) {
+        const container = document.getElementById('options-container');
+        container.innerHTML = '';
+        const correctEvs = masterData.filter(d => d.yr === correctItem.yr).map(d => d.ev);
+        const dummies = masterData.filter(d => d.yr !== correctItem.yr).map(d => d.ev).sort(() => Math.random() - 0.5).slice(0, 5);
+        const options = [...new Set([correctItem.ev, ...dummies])].sort(() => Math.random() - 0.5);
+        options.forEach(opt => {
+            const div = document.createElement('div');
+            div.className = 'option-item';
+            div.innerHTML = `<label style="cursor:pointer; display:block;"><input type="checkbox" value="${opt}"> ${opt}</label>`;
+            container.appendChild(div);
         });
-        list.innerHTML = html;
     }
 
-    function toggleFullScreen() {
-        if (!document.fullscreenElement) document.documentElement.requestFullscreen();
-        else document.exitFullscreen();
+    function checkSelectAnswer() {
+        const selected = Array.from(document.querySelectorAll('#options-container input:checked')).map(i => i.value);
+        const correctEvs = masterData.filter(d => d.yr === currentQueue[currentIndex].yr).map(d => d.ev);
+        const isCorrect = selected.length > 0 && selected.every(s => correctEvs.includes(s)) && correctEvs.filter(c => Array.from(document.querySelectorAll('#options-container input')).map(el=>el.value).includes(c)).every(c => selected.includes(c));
+        document.getElementById('select-feedback').innerText = isCorrect ? "正解！" : "不正解";
+        document.getElementById('select-feedback').style.color = isCorrect ? "var(--success)" : "var(--error)";
+        setTimeout(() => recordResult(isCorrect), 800);
     }
 
-    loadTableList();
-    setInterval(updateRanking, 5000);
+    // --- キーボード操作 ---
+    window.addEventListener('keydown', (e) => {
+        if (document.getElementById('app-screen').classList.contains('hidden')) return;
+        if (currentMode.startsWith('flash')) {
+            if (e.code === 'Space') { e.preventDefault(); isFlipped ? recordResult(true) : toggleFlash(); }
+            if (e.code === 'KeyM') recordResult(false);
+        } else if (currentMode === 'quiz-input' && e.key === 'Enter') {
+            checkInputAnswer();
+        }
+    });
+
+    function exitApp() {
+        document.getElementById('setup-screen').classList.remove('hidden');
+        document.getElementById('app-screen').classList.add('hidden');
+        updateStatsDisplay();
+    }
 </script>
 </body>
 </html>
