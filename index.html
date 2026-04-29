@@ -11,43 +11,28 @@
             color: var(--text); margin: 0; overflow: hidden;
             display: flex; flex-direction: column; height: 100vh;
         }
-        
-        /* 操作パネル（元のVocaClear風） */
         .controls { 
             background: white; padding: 10px 20px; display: flex; gap: 15px; 
             align-items: center; border-bottom: 1px solid #e2e8f0; z-index: 100;
         }
-        select, input { 
-            padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px; 
-            font-size: 0.9rem; outline: none;
-        }
-        .btn-main { 
-            background: var(--primary); color: white; border: none; padding: 8px 16px; 
-            border-radius: 8px; font-weight: bold; cursor: pointer; 
-        }
+        select, input { padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px; outline: none; }
+        .btn-main { background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; }
         .btn-sub { background: #64748b; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; }
 
-        /* ヘッダー：パスワードとタイマー（巨大表示） */
         .header { 
-            height: 45vh; display: flex; align-items: center; justify-content: center;
+            height: 40vh; display: flex; align-items: center; justify-content: center;
             background: white; margin: 20px; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         }
         .header-section { flex: 1; text-align: center; }
         .divider { width: 2px; background: #f1f5f9; height: 60%; }
-
         .label { font-size: 1.2rem; color: #64748b; font-weight: bold; margin-bottom: 10px; }
-        .display-value { 
-            font-size: 9rem; font-family: 'Helvetica', sans-serif; 
-            font-weight: bold; color: var(--text); 
-        }
+        .display-value { font-size: 8rem; font-weight: bold; color: var(--text); }
         #passwordDisplay { color: var(--primary); letter-spacing: 5px; }
         #timerDisplay { color: var(--accent); font-family: monospace; }
         .timer-finished { color: #ef4444 !important; animation: blink 1s infinite; }
 
-        /* ランキング */
         .ranking-container { flex: 1; padding: 0 40px 40px; display: flex; flex-direction: column; align-items: center; }
-        .ranking-title { font-size: 1.8rem; margin: 20px 0; color: #334155; display: flex; align-items: center; gap: 10px; }
-        
+        .ranking-title { font-size: 1.8rem; margin: 20px 0; color: #334155; }
         .ranking-list { width: 100%; max-width: 1000px; }
         .rank-item { 
             display: flex; justify-content: space-between; align-items: center;
@@ -56,41 +41,37 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.02);
             transition: all 0.5s ease-in-out;
         }
-
-        /* 更新時のアニメーション */
         .updated { animation: flash 1.5s ease-out; }
         @keyframes flash {
             0% { background: #dcfce7; transform: scale(1.02); }
             100% { background: white; transform: scale(1); }
         }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-
         .rank-num { width: 200px; color: #94a3b8; font-size: 1.8rem; }
-        .rank-name { flex: 1; text-align: left; color: #1e293b; }
+        .rank-name { flex: 1; text-align: left; }
         .rank-score { color: var(--primary); width: 150px; text-align: right; }
-
     </style>
 </head>
 <body>
 
     <div class="controls">
-        <b style="color: var(--primary)">VocaClear Dashboard</b>
+        <b style="color: var(--primary)">VocaClear Live</b>
         <select id="tableSelector" onchange="initDashboard()">
             <option value="">-- テーブルを選択 --</option>
         </select>
         <input type="number" id="timerInput" placeholder="分" style="width: 60px;">
-        <button class="btn-main" onclick="startTimer()">タイマー開始</button>
+        <button class="btn-main" onclick="startTimer()">開始</button>
         <button class="btn-sub" onclick="toggleFullScreen()">全画面</button>
     </div>
 
     <div class="header">
         <div class="header-section">
-            <div class="label">EXAM PASS</div>
+            <div class="label">PASS</div>
             <div id="passwordDisplay" class="display-value">----</div>
         </div>
         <div class="divider"></div>
         <div class="header-section">
-            <div class="label">TIME LEFT</div>
+            <div class="label">TIME</div>
             <div id="timerDisplay" class="display-value">00:00</div>
         </div>
     </div>
@@ -101,118 +82,79 @@
     </div>
 
 <script>
-    // 1. 基本設定（重複宣言を避けるため一箇所にまとめます）
+    // 【重要】supabaseの宣言はここ1回だけ！
     const SUPABASE_URL = 'https://vcbhwpahrzdjbakflwvd.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjYmh3cGFocnpjamJha2Zsd3ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5NTEzMzEsImV4cCI6MjA5MjUyNzMzMX0.Uv71jxtuVhoofw7Z5daMB7JhGncUNQyRslTuGhl_KI0';
-    
-    // ここで一回だけ宣言
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjYmh3cGFocnpkamJha2Zsd3ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5NTEzMzEsImV4cCI6MjA5MjUyNzMzMX0.Uv71jxtuVhoofw7Z5daMB7JhGncUNQyRslTuGhl_KI0';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let lastData = [];
     let timerInterval;
 
-    // テーブルリストの取得
     async function loadTableList() {
-        try {
-            const { data, error } = await supabase.from('table_passwords').select('table_name');
-            if (error) throw error;
-            
+        const { data, error } = await supabaseClient.from('table_passwords').select('table_name');
+        if (data) {
             const selector = document.getElementById('tableSelector');
-            selector.innerHTML = '<option value="">-- テーブルを選択 --</option>';
-            
-            if (data) {
-                data.forEach(item => {
-                    const opt = document.createElement('option');
-                    opt.value = item.table_name;
-                    opt.textContent = item.table_name;
-                    selector.appendChild(opt);
-                });
-            }
-        } catch (err) {
-            console.error("取得失敗:", err.message);
+            data.forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item.table_name;
+                opt.textContent = item.table_name;
+                selector.appendChild(opt);
+            });
         }
     }
 
-    // パスワード表示と初期描画
     async function initDashboard() {
         const tableName = document.getElementById('tableSelector').value;
         if (!tableName) return;
-
-        const { data } = await supabase
-            .from('table_passwords')
-            .select('password')
-            .eq('table_name', tableName)
-            .single();
-
+        const { data } = await supabaseClient.from('table_passwords').select('password').eq('table_name', tableName).single();
         document.getElementById('passwordDisplay').innerText = data ? data.password : "----";
         updateRanking();
     }
 
-    // タイマー開始
     function startTimer() {
         clearInterval(timerInterval);
-        const mins = parseInt(document.getElementById('timerInput').value) || 0;
-        let timeLeft = mins * 60;
+        let timeLeft = (parseInt(document.getElementById('timerInput').value) || 0) * 60;
         const display = document.getElementById('timerDisplay');
         display.classList.remove('timer-finished');
-
         timerInterval = setInterval(() => {
             const m = Math.floor(timeLeft / 60);
             const s = timeLeft % 60;
             display.innerText = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
             if (timeLeft <= 0) {
                 clearInterval(timerInterval);
-                display.innerText = "TIME UP";
+                display.innerText = "FINISH";
                 display.classList.add('timer-finished');
             }
             timeLeft--;
         }, 1000);
     }
 
-    // ランキング取得と更新
     async function updateRanking() {
         const tableName = document.getElementById('tableSelector').value;
         if (!tableName) return;
-
-        const { data } = await supabase
-            .from('quiz_results')
-            .select('nickname, score_percent, created_at')
-            .eq('table_name', tableName)
-            .order('score_percent', { ascending: false })
-            .order('created_at', { ascending: true })
-            .limit(3);
-
+        const { data } = await supabaseClient.from('quiz_results').select('nickname, score_percent').eq('table_name', tableName).order('score_percent', { ascending: false }).order('created_at', { ascending: true }).limit(3);
         if (data) {
             renderRanking(data);
             lastData = JSON.parse(JSON.stringify(data));
         }
     }
 
-    // ランキング描画
     function renderRanking(newData) {
-        const listContainer = document.getElementById('rankingList');
-        let lastScore = -1;
-        let rank = 0;
-        let html = "";
-
+        const list = document.getElementById('rankingList');
+        let lastScore = -1, rank = 0, html = "";
         newData.forEach((res, i) => {
             if (res.score_percent !== lastScore) rank = i + 1;
             lastScore = res.score_percent;
-
-            const prevRes = lastData[i];
-            // 前回と違うデータがある時だけ更新アニメーション（updatedクラス）を付与
-            const isChanged = !prevRes || prevRes.nickname !== res.nickname || prevRes.score_percent !== res.score_percent;
-            const isTie = newData.filter(d => d.score_percent === res.score_percent).length > 1;
-            const rankLabel = isTie ? `${rank}位タイ` : `${rank}位`;
-
-            html += `
-                <div class="rank-item ${isChanged && lastData.length > 0 ? 'updated' : ''}">
-                    <div class="rank-num">${rankLabel}</div>
-                    <div class="rank-name">${res.nickname}</div>
-                    <div class="rank-score">${res.score_percent}%</div>
-                </div>`;
+            const prev = lastData[i];
+            const isChanged = !prev || prev.nickname !== res.nickname || prev.score_percent !== res.score_percent;
+            const tie = newData.filter(d => d.score_percent === res.score_percent).length > 1;
+            html += `<div class="rank-item ${isChanged && lastData.length > 0 ? 'updated' : ''}">
+                <div class="rank-num">${tie ? rank+'位タイ' : rank+'位'}</div>
+                <div class="rank-name">${res.nickname}</div>
+                <div class="rank-score">${res.score_percent}%</div>
+            </div>`;
         });
-        listContainer.innerHTML = html;
+        list.innerHTML = html;
     }
 
     function toggleFullScreen() {
@@ -220,9 +162,8 @@
         else document.exitFullscreen();
     }
 
-    // 起動時の初期処理
     loadTableList();
-    setInterval(updateRanking, 5000); // 5秒おきにランキングチェック
+    setInterval(updateRanking, 5000);
 </script>
 </body>
 </html>
