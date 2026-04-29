@@ -11,49 +11,56 @@
             color: var(--text); margin: 0; overflow: hidden;
             display: flex; flex-direction: column; height: 100vh;
         }
+        
+        /* 操作パネル（微調整） */
         .controls { 
-            background: white; padding: 10px 20px; display: flex; gap: 15px; 
+            background: white; padding: 10px 20px; display: flex; gap: 10px; 
             align-items: center; border-bottom: 1px solid #e2e8f0; z-index: 100;
         }
         select, input { padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px; outline: none; }
+        .timer-input-group { display: flex; align-items: center; gap: 5px; font-weight: bold; }
         .btn-main { background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; }
         .btn-sub { background: #64748b; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; }
 
+        /* ヘッダー：極大表示設定 */
         .header { 
-            height: 45vh; display: flex; align-items: center; justify-content: center;
-            background: white; margin: 20px; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            height: 50vh; display: flex; align-items: center; justify-content: center;
+            background: white; margin: 20px; border-radius: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.05);
         }
         .header-section { flex: 1; text-align: center; display: flex; flex-direction: column; justify-content: center; }
-        .divider { width: 2px; background: #f1f5f9; height: 60%; }
+        .divider { width: 4px; background: #f1f5f9; height: 70%; border-radius: 2px; }
         
-        /* テーブル名表示のスタイル */
-        .table-name-label { font-size: 2.5rem; color: #64748b; font-weight: bold; margin-bottom: 5px; }
-        .label { font-size: 1.2rem; color: #94a3b8; font-weight: bold; letter-spacing: 2px; }
+        /* テキストサイズをさらに大きく */
+        .table-name-label { font-size: 3.5rem; color: #64748b; font-weight: 900; margin-bottom: 0; word-break: break-all; padding: 0 20px; }
+        .label { font-size: 1.5rem; color: #94a3b8; font-weight: bold; letter-spacing: 4px; margin-bottom: 10px; }
         
-        .display-value { font-size: 8rem; font-weight: bold; color: var(--text); margin-top: -10px; }
-        #passwordDisplay { color: var(--primary); letter-spacing: 5px; }
-        #timerDisplay { color: var(--accent); font-family: monospace; }
-        .timer-finished { color: #ef4444 !important; animation: blink 1s infinite; }
+        .display-value { font-size: 12rem; font-weight: 900; line-height: 1; color: var(--text); }
+        #passwordDisplay { color: var(--primary); letter-spacing: 10px; }
+        #timerDisplay { color: var(--accent); font-family: 'Courier New', monospace; }
+        
+        .timer-finished { color: #ef4444 !important; animation: blink 0.8s infinite; }
 
-        .ranking-container { flex: 1; padding: 0 40px 40px; display: flex; flex-direction: column; align-items: center; }
-        .ranking-title { font-size: 1.8rem; margin: 20px 0; color: #334155; }
-        .ranking-list { width: 100%; max-width: 1000px; }
+        /* ランキングも大きく */
+        .ranking-container { flex: 1; padding: 0 40px 20px; display: flex; flex-direction: column; align-items: center; }
+        .ranking-title { font-size: 2.2rem; margin: 15px 0; color: #334155; font-weight: bold; }
+        .ranking-list { width: 100%; max-width: 1200px; }
         .rank-item { 
             display: flex; justify-content: space-between; align-items: center;
-            background: white; margin-bottom: 10px; padding: 15px 50px;
-            border-radius: 15px; font-size: 2.2rem; font-weight: bold;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            background: white; margin-bottom: 12px; padding: 25px 60px;
+            border-radius: 20px; font-size: 3rem; font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
             transition: all 0.5s ease-in-out;
         }
         .updated { animation: flash 1.5s ease-out; }
         @keyframes flash {
-            0% { background: #dcfce7; transform: scale(1.02); }
+            0% { background: #dcfce7; transform: scale(1.03); }
             100% { background: white; transform: scale(1); }
         }
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-        .rank-num { width: 200px; color: #94a3b8; font-size: 1.5rem; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+        
+        .rank-num { width: 250px; color: #94a3b8; font-size: 2rem; }
         .rank-name { flex: 1; text-align: left; }
-        .rank-score { color: var(--primary); width: 150px; text-align: right; }
+        .rank-score { color: var(--primary); width: 200px; text-align: right; }
     </style>
 </head>
 <body>
@@ -63,20 +70,25 @@
         <select id="tableSelector" onchange="initDashboard()">
             <option value="">-- テーブルを選択 --</option>
         </select>
-        <input type="number" id="timerInput" placeholder="分" style="width: 60px;">
-        <button class="btn-main" onclick="startTimer()">開始</button>
-        <button class="btn-sub" onclick="toggleFullScreen()">全画面</button>
+        
+        <div class="timer-input-group">
+            <input type="number" id="timerMin" placeholder="分" style="width: 60px;" value="0"> 分
+            <input type="number" id="timerSec" placeholder="秒" style="width: 60px;" value="0"> 秒
+        </div>
+        
+        <button class="btn-main" onclick="startTimer()">タイマー開始</button>
+        <button class="btn-sub" onclick="toggleFullScreen()">全画面表示</button>
     </div>
 
     <div class="header">
         <div class="header-section">
             <div id="currentTableName" class="table-name-label">----</div>
-            <div class="label">EXAM PASS</div>
+            <div class="label">PASS</div>
             <div id="passwordDisplay" class="display-value">----</div>
         </div>
         <div class="divider"></div>
         <div class="header-section">
-            <div class="label" style="margin-top: 40px;">TIME LEFT</div>
+            <div class="label">TIME</div>
             <div id="timerDisplay" class="display-value">00:00</div>
         </div>
     </div>
@@ -110,29 +122,28 @@
     async function initDashboard() {
         const tableName = document.getElementById('tableSelector').value;
         if (!tableName) return;
-
-        // 画面上のテーブル名を更新
         document.getElementById('currentTableName').innerText = tableName;
-
-        const { data } = await supabaseClient
-            .from('table_passwords')
-            .select('password')
-            .eq('table_name', tableName)
-            .single();
-
+        const { data } = await supabaseClient.from('table_passwords').select('password').eq('table_name', tableName).single();
         document.getElementById('passwordDisplay').innerText = data ? data.password : "----";
         updateRanking();
     }
 
     function startTimer() {
         clearInterval(timerInterval);
-        let timeLeft = (parseInt(document.getElementById('timerInput').value) || 0) * 60;
+        const mins = parseInt(document.getElementById('timerMin').value) || 0;
+        const secs = parseInt(document.getElementById('timerSec').value) || 0;
+        let timeLeft = (mins * 60) + secs;
+
+        if (timeLeft <= 0) return alert("時間を設定してください");
+
         const display = document.getElementById('timerDisplay');
         display.classList.remove('timer-finished');
+
         timerInterval = setInterval(() => {
             const m = Math.floor(timeLeft / 60);
             const s = timeLeft % 60;
             display.innerText = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+            
             if (timeLeft <= 0) {
                 clearInterval(timerInterval);
                 display.innerText = "FINISH";
@@ -145,13 +156,7 @@
     async function updateRanking() {
         const tableName = document.getElementById('tableSelector').value;
         if (!tableName) return;
-        const { data } = await supabaseClient
-            .from('quiz_results')
-            .select('nickname, score_percent')
-            .eq('table_name', tableName)
-            .order('score_percent', { ascending: false })
-            .order('created_at', { ascending: true })
-            .limit(3);
+        const { data } = await supabaseClient.from('quiz_results').select('nickname, score_percent').eq('table_name', tableName).order('score_percent', { ascending: false }).order('created_at', { ascending: true }).limit(3);
         if (data) {
             renderRanking(data);
             lastData = JSON.parse(JSON.stringify(data));
