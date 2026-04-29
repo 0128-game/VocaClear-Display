@@ -5,70 +5,41 @@
     <title>VocaClear - Live Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root { --primary: #3ecf8e; --bg: #f8fafc; --text: #1e293b; --card: #ffffff; --accent: #f59e0b; }
-        body { 
-            font-family: 'Helvetica Neue', Arial, sans-serif; background-color: var(--bg); 
-            color: var(--text); margin: 0; overflow: hidden;
-            display: flex; flex-direction: column; height: 100vh;
-        }
+        :root { --primary: #3ecf8e; --bg: #f8fafc; --text: #1e293b; }
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .container { background: white; width: 90%; max-width: 600px; padding: 40px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); text-align: center; }
         
-        /* 操作パネル（元のVocaClear風） */
-        .controls { 
-            background: white; padding: 10px 20px; display: flex; gap: 15px; 
-            align-items: center; border-bottom: 1px solid #e2e8f0; z-index: 100;
-        }
-        select, input { 
-            padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px; 
-            font-size: 0.9rem; outline: none;
-        }
-        .btn-main { 
-            background: var(--primary); color: white; border: none; padding: 8px 16px; 
-            border-radius: 8px; font-weight: bold; cursor: pointer; 
-        }
-        .btn-sub { background: #64748b; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; }
+        /* セクション管理 */
+        .page { display: none; }
+        .page.active { display: block; animation: fadeIn 0.5s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* ヘッダー：パスワードとタイマー（巨大表示） */
-        .header { 
-            height: 45vh; display: flex; align-items: center; justify-content: center;
-            background: white; margin: 20px; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-        }
-        .header-section { flex: 1; text-align: center; }
-        .divider { width: 2px; background: #f1f5f9; height: 60%; }
-
-        .label { font-size: 1.2rem; color: #64748b; font-weight: bold; margin-bottom: 10px; }
-        .display-value { 
-            font-size: 9rem; font-family: 'Helvetica', sans-serif; 
-            font-weight: bold; color: var(--text); 
-        }
-        #passwordDisplay { color: var(--primary); letter-spacing: 5px; }
-        #timerDisplay { color: var(--accent); font-family: monospace; }
-        .timer-finished { color: #ef4444 !important; animation: blink 1s infinite; }
-
-        /* ランキング */
-        .ranking-container { flex: 1; padding: 0 40px 40px; display: flex; flex-direction: column; align-items: center; }
-        .ranking-title { font-size: 1.8rem; margin: 20px 0; color: #334155; display: flex; align-items: center; gap: 10px; }
+        h2 { margin-top: 0; color: #333; }
+        input { width: 100%; padding: 12px; margin: 15px 0; border: 2px solid #e2e8f0; border-radius: 10px; box-sizing: border-box; font-size: 1rem; }
+        button { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 1rem; transition: 0.2s; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
         
-        .ranking-list { width: 100%; max-width: 1000px; }
-        .rank-item { 
-            display: flex; justify-content: space-between; align-items: center;
-            background: white; margin-bottom: 10px; padding: 20px 50px;
-            border-radius: 15px; font-size: 2.5rem; font-weight: bold;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-            transition: all 0.5s ease-in-out;
-        }
+        /* ローディング */
+        #loader { display: none; margin: 10px 0; color: var(--primary); font-weight: bold; }
+        .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(62,207,142,.3); border-radius: 50%; border-top-color: var(--primary); animation: spin 1s ease-in-out infinite; vertical-align: middle; margin-right: 8px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* 更新時のアニメーション */
-        .updated { animation: flash 1.5s ease-out; }
-        @keyframes flash {
-            0% { background: #dcfce7; transform: scale(1.02); }
-            100% { background: white; transform: scale(1); }
-        }
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        /* 一覧表示 */
+        .scroll-area { max-height: 300px; overflow-y: auto; border: 1px solid #eee; margin: 20px 0; border-radius: 10px; }
+        table { width: 100%; border-collapse: collapse; }
+        td, th { padding: 12px; border-bottom: 1px solid #f1f5f9; text-align: left; }
 
-        .rank-num { width: 200px; color: #94a3b8; font-size: 1.8rem; }
-        .rank-name { flex: 1; text-align: left; color: #1e293b; }
-        .rank-score { color: var(--primary); width: 150px; text-align: right; }
-
+        /* クイズ */
+        .q-text { font-size: 2rem; margin: 30px 0; font-weight: bold; color: #1e293b; }
+        .progress { font-size: 0.9rem; color: #64748b; margin-bottom: 10px; }
+        #feedback { min-height: 30px; margin-top: 15px; font-weight: bold; }
+        
+        /* 結果画面 */
+        .score { font-size: 3rem; color: var(--primary); font-weight: bold; margin: 20px 0; }
+        /* 修正箇所：間違えた単語の強調スタイル */
+        .wrong-word { background-color: #ffebee !important; }
+        /* 修正箇所：完全に非表示にする（背景色と同じにして見えなくする） */
+        .hidden-col { visibility: hidden; }
     </style>
 </head>
 <body>
